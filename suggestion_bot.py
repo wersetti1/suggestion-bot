@@ -5,7 +5,7 @@ from aiogram.filters import CommandStart
 
 # Вставьте сюда ваш токен от @BotFather и ваш Telegram ID от @userinfobot
 BOT_TOKEN = "8888033833:AAHCof6gsdhNajXrF8Uk2XnnhkZmCfNCS9U"
-ADMIN_ID = 8626592837  # Ваш Telegram ID (число)
+ADMIN_ID = 8626592837  # Ваш ID установлен верно
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
