@@ -5,7 +5,7 @@ from aiogram.filters import CommandStart
 
 # Вставьте сюда ваш токен от @BotFather и ваш Telegram ID от @userinfobot
 BOT_TOKEN = "8888033833:AAHCof6gsdhNajXrF8Uk2XnnhkZmCfNCS9U"
-ADMIN_ID = 8626592837  # Ваш ID установлен верно
+ADMIN_ID = 8626592837  # Ваш Telegram ID (число)
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -22,11 +22,8 @@ async def start_user(message: types.Message):
 @dp.message(CommandStart(), F.chat.id == ADMIN_ID)
 async def start_admin(message: types.Message):
     await message.answer(
-        "🛠 **Бот предложки запущен!**
-
-"
-        "• Сообщения пользователей будут пересылаться в этот чат.
-"
+        "🛠 **Бот предложки запущен!**\n\n"
+        "• Сообщения пользователей будут пересылаться в этот чат.\n"
         "• Чтобы ответить пользователю, используйте функцию **«Ответить» (Reply)** на пересланное сообщение."
     )
 
@@ -52,14 +49,10 @@ async def reply_to_user(message: types.Message):
             await message.copy_to(chat_id=user_id)
             await message.answer("🚀 Ответ успешно отправлен!")
         except Exception as e:
-            await message.answer(f"❌ Не удалось отправить ответ. Возможно, пользователь заблокировал бота.
-
-Ошибка: {e}")
+            await message.answer(f"❌ Не удалось отправить ответ. Возможно, пользователь заблокировал бота.\n\nОшибка: {e}")
     else:
         await message.answer(
-            "⚠️ Не удалось определить ID пользователя.
-
-"
+            "⚠️ Не удалось определить ID пользователя.\n\n"
             "Скорее всего, у пользователя в настройках конфиденциальности "
             "включено скрытие аккаунта при пересылке сообщений."
         )
