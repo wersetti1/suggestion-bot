@@ -175,70 +175,56 @@ async def info_cmd(message: types.Message):
 
 # --- АДМИН ПАНЕЛЬ КОМАНДА /ворк ---
 
-@dp.message(Command("ворк"))
-async def admin_work_cmd(message: types.Message):
+# Пересылка сообщений от пользователей админам
+@dp.message(~F.text.startswith("/"))
+async def forward_to_admin(message: types.Message):
+    if is_admin(message.from_user.id):
+        return
+
+    add_user(message.from_user.id)
+    admins = get_all_admins()
+    user = message.from_user
+    
+    # Служебный текст без форматирования
+    info_header = f"📩 Сообщение от пользователя:\n🆔 #id{user.id}\n-------------------\n"
+    
+    for admin_id in admins:
+        try:
+            if message.text:
+                await bot.send_message(
+                    chat_id=admin_id,
+                    text=info_header + message.text
+                )
+            else:
+                # Сначала отправляем ID, затем медиа
+                await bot.send_message(chat_id=admin_id, text=info_header)
+                await message.copy_to(chat_id=admin_id)
+        except Exception as e:
+            logging.error(f"Ошибка отправки админу {admin_id}: {e}")
+            
+    await message.answer("✅ Ваше сообщение отправлено администраторам!")
+
+# Ответы от любого админа пользователю
+@dp.message(F.reply_to_message)
+async def reply_to_user(message: types.Message):
     if not is_admin(message.from_user.id):
         return
-    await message.answer("⚙️ **Панель администратора:**", reply_markup=get_admin_ikb(), parse_mode="Markdown")
 
-# --- ОБРАБОТКА ИНЛАЙН КНОПОК АДМИНКИ ---
-
-@dp.callback_query(F.data.startswith("admin_"))
-async def admin_callback(call: types.CallbackQuery, state: FSMContext):
-    if not is_admin(call.from_user.id):
-        await call.answer("У вас нет прав!", show_alert=True)
-        return
-
-    action = call.data
-
-    if action == "admin_broadcast":
-        await state.set_state(AdminStates.waiting_for_broadcast)
-        await call.message.answer("📢 Отправьте сообщение для рассылки (поддерживаются текст, фото, видео и т.д.):")
+    reply = message.reply_to_message
+    text_to_search = reply.text or reply.caption or ""
     
-    elif action == "admin_add":
-        await state.set_state(AdminStates.waiting_for_add_admin)
-        await call.message.answer("➕ Введите **Telegram ID** пользователя, которого хотите сделать админом:")
-        
-    elif action == "admin_del":
-        await state.set_state(AdminStates.waiting_for_del_admin)
-        await call.message.answer("➖ Введите **Telegram ID** админа, которого хотите удалить:")
-
-    elif action == "admin_list":
-        admins = get_all_admins()
-        text = "👥 **Список администраторов:**\n\n" + "\n".join([f"• `{a}`" for a in admins])
-        await call.message.answer(text, parse_mode="Markdown")
-
-    elif action == "admin_stats":
-        users = get_all_users()
-        admins = get_all_admins()
-        await call.message.answer(f"📊 **Статистика:**\n\nВсего пользователей: **{len(users)}**\nВсего админов: **{len(admins)}**", parse_mode="Markdown")
-
-    elif action == "admin_edit_start":
-        await state.set_state(AdminStates.waiting_for_start_text)
-        await call.message.answer("✏️ Введите новый текст приветствия (команда `/start`):")
-
-    elif action == "admin_edit_info":
-        await state.set_state(AdminStates.waiting_for_info_text)
-        await call.message.answer("✏️ Введите новый текст для кнопки **«ℹ️ Информация»**:")
-
-    await call.answer()
-
-# --- ОБРАБОТКА ВВОДА АДМИНА (FSM) ---
-
-@dp.message(AdminStates.waiting_for_broadcast)
-async def process_broadcast(message: types.Message, state: FSMContext):
-    await state.clear()
-    users = get_all_users()
-    count = 0
-    await message.answer(f"🚀 Рассылка началась на {len(users)} пользователей...")
+    # Поиск ID
+    match = re.search(r"#id(\d+)", text_to_search)
     
-    for uid in users:
+    if match:
+        user_id = int(match.group(1))
         try:
-            await message.copy_to(chat_id=uid)
-            count += 1
-            await asyncio.sleep(0.05) # Небольшая пауза, чтобы не превысить лимиты Telegram
-        except Exception:
-            pass
+            await message.copy_to(chat_id=user_id)
+            await message.answer("🚀 Ответ успешно отправлен!")
+        except Exception as e:
+            await message.answer(f"❌ Ошибка отправки пользователю {user_id}:\n{e}")
+    else:
+        await message.answer("⚠️ Не удалось найти #id. Убедитесь, что отвечаете (Reply) на сообщение бота с ID пользователя.")
             
     await message.answer(f"✅ Рассылка завершена! Успешно доставлено: {count} из {len(users)}")
 
